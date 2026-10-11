@@ -7,10 +7,12 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
@@ -18,6 +20,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.net.Uri;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -27,18 +30,19 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
 
     private static final String DEFAULT_URL =
-            "https://www.paypal.com/ng/welcome/signup/#/login_info";
+        "https://www.paypal.com/ng/welcome/signup/#/login_info";
 
     private static final int BLUE = Color.rgb(0, 48, 135);
-    private static final int LIGHT_BLUE = Color.rgb(0, 112, 224);
+    private static final int ACCENT = Color.rgb(0, 112, 224);
     private static final int WHITE = Color.WHITE;
 
     private WebView webView;
     private EditText urlBar;
 
     private int dp(float value) {
-        return (int) (value *
-                getResources().getDisplayMetrics().density + 0.5f);
+        return (int) (
+            value * getResources().getDisplayMetrics().density + 0.5f
+        );
     }
 
     private GradientDrawable rounded(int color, int radius) {
@@ -48,51 +52,56 @@ public class MainActivity extends Activity {
         return drawable;
     }
 
-    private LinearLayout.LayoutParams params(
-            int width, int height) {
-        return new LinearLayout.LayoutParams(
-                width == -1 ? -1 : width == 0 ? 0 : dp(width),
-                height == -1 ? -1 : height == 0 ? 0 : dp(height)
-        );
-    }
+    private TextView makeButton(String text, int width) {
+        TextView button = new TextView(this);
+        button.setText(text);
+        button.setTextColor(WHITE);
+        button.setTextSize(20);
+        button.setGravity(Gravity.CENTER);
+        button.setTypeface(Typeface.DEFAULT_BOLD);
+        button.setBackground(rounded(BLUE, 10));
 
-    private TextView button(String text, int width) {
-        TextView view = new TextView(this);
-        view.setText(text);
-        view.setTextColor(WHITE);
-        view.setTextSize(19);
-        view.setTypeface(Typeface.DEFAULT_BOLD);
-        view.setGravity(Gravity.CENTER);
-        view.setBackground(rounded(BLUE, 10));
+        LinearLayout.LayoutParams lp =
+            new LinearLayout.LayoutParams(dp(width), dp(44));
 
-        LinearLayout.LayoutParams lp = params(width, 42);
         lp.setMargins(dp(3), 0, dp(3), 0);
-        view.setLayoutParams(lp);
+        button.setLayoutParams(lp);
 
-        return view;
+        return button;
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        getWindow().setStatusBarColor(BLUE);
-        getWindow().setNavigationBarColor(Color.BLACK);
+        // IMPORTANT: Keep the Android status bar visible.
+        Window window = getWindow();
 
-        // MAIN LAYOUT
+        window.clearFlags(
+            WindowManager.LayoutParams.FLAG_FULLSCREEN
+        );
 
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS
+        );
+
+        window.setStatusBarColor(BLUE);
+        window.setNavigationBarColor(Color.BLACK);
+
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            window.getDecorView().setSystemUiVisibility(0);
+        }
+
+        // ROOT LAYOUT
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(WHITE);
 
-        // =================================
-        // FIRST ROW: APP NAME + MENU
-        // =================================
-
+        // TOP HEADER
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
-        header.setPadding(dp(14), dp(5), dp(10), dp(5));
+        header.setPadding(dp(14), dp(4), dp(10), dp(4));
         header.setBackgroundColor(BLUE);
 
         TextView brand = new TextView(this);
@@ -103,30 +112,32 @@ public class MainActivity extends Activity {
         brand.setGravity(Gravity.CENTER_VERTICAL);
 
         header.addView(
-                brand,
-                new LinearLayout.LayoutParams(0, dp(46), 1f)
+            brand,
+            new LinearLayout.LayoutParams(0, dp(48), 1f)
         );
 
-        TextView menu = button("⋮", 42);
-        menu.setContentDescription("Menu");
+        TextView menu = makeButton("⋮", 42);
         menu.setOnClickListener(v -> showMenu());
-
         header.addView(menu);
-        root.addView(header);
 
-        // =================================
-        // SECOND ROW: URL + REFRESH
-        // =================================
+        root.addView(
+            header,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(56)
+            )
+        );
 
+        // ADDRESS BAR ROW
         LinearLayout addressRow = new LinearLayout(this);
         addressRow.setOrientation(LinearLayout.HORIZONTAL);
         addressRow.setGravity(Gravity.CENTER_VERTICAL);
-        addressRow.setPadding(dp(9), dp(7), dp(9), dp(7));
+        addressRow.setPadding(dp(10), dp(5), dp(10), dp(9));
         addressRow.setBackgroundColor(BLUE);
 
         urlBar = new EditText(this);
         urlBar.setSingleLine(true);
-        urlBar.setTextSize(14);
+        urlBar.setTextSize(13);
         urlBar.setTextColor(Color.rgb(25, 35, 55));
         urlBar.setHintTextColor(Color.GRAY);
         urlBar.setHint("Enter website address");
@@ -134,30 +145,32 @@ public class MainActivity extends Activity {
         urlBar.setSelectAllOnFocus(true);
 
         urlBar.setInputType(
-                android.text.InputType.TYPE_CLASS_TEXT
-                        | android.text.InputType.TYPE_TEXT_VARIATION_URI
+            android.text.InputType.TYPE_CLASS_TEXT |
+            android.text.InputType.TYPE_TEXT_VARIATION_URI
         );
 
         urlBar.setImeOptions(EditorInfo.IME_ACTION_GO);
         urlBar.setBackground(rounded(WHITE, 12));
 
-        LinearLayout.LayoutParams addressParams =
-                new LinearLayout.LayoutParams(0, dp(44), 1f);
+        LinearLayout.LayoutParams urlParams =
+            new LinearLayout.LayoutParams(0, dp(44), 1f);
 
-        addressParams.setMargins(0, 0, dp(6), 0);
-        addressRow.addView(urlBar, addressParams);
+        urlParams.setMargins(0, 0, dp(6), 0);
+        addressRow.addView(urlBar, urlParams);
 
-        TextView refresh = button("↻", 44);
-        refresh.setContentDescription("Refresh page");
+        TextView refresh = makeButton("↻", 44);
         refresh.setOnClickListener(v -> webView.reload());
-
         addressRow.addView(refresh);
-        root.addView(addressRow);
 
-        // =================================
-        // WEBSITE VIEW
-        // =================================
+        root.addView(
+            addressRow,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(58)
+            )
+        );
 
+        // WEBSITE
         webView = new WebView(this);
         webView.setBackgroundColor(WHITE);
 
@@ -173,109 +186,99 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean shouldOverrideUrlLoading(
-                    WebView view,
-                    WebResourceRequest request) {
-
+                WebView view,
+                WebResourceRequest request
+            ) {
                 String scheme = request.getUrl().getScheme();
 
-                return !("https".equalsIgnoreCase(scheme)
-                        || "http".equalsIgnoreCase(scheme));
+                return !(
+                    "https".equalsIgnoreCase(scheme) ||
+                    "http".equalsIgnoreCase(scheme)
+                );
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
 
-                if (url != null) {
+                if (url != null && !urlBar.hasFocus()) {
                     urlBar.setText(url);
                 }
             }
         });
 
         root.addView(
-                webView,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        0,
-                        1f
-                )
+            webView,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         );
 
-        // =================================
-        // BOTTOM CLEAR COOKIES BUTTON
-        // =================================
-
+        // BOTTOM CLEAR COOKIES
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.VERTICAL);
-        bottom.setPadding(dp(12), dp(7), dp(12), dp(9));
+        bottom.setGravity(Gravity.CENTER);
+        bottom.setPadding(dp(12), dp(7), dp(12), dp(8));
         bottom.setBackgroundColor(WHITE);
 
-        Button clearCookies = new Button(this);
-        clearCookies.setText("🧹  Clear Cookies");
-        clearCookies.setAllCaps(false);
-        clearCookies.setTextColor(WHITE);
-        clearCookies.setTextSize(16);
-        clearCookies.setTypeface(Typeface.DEFAULT_BOLD);
-        clearCookies.setBackground(rounded(LIGHT_BLUE, 15));
-        clearCookies.setElevation(dp(3));
+        Button clearButton = new Button(this);
+        clearButton.setText("🧹  Clear Cookies");
+        clearButton.setAllCaps(false);
+        clearButton.setTextSize(16);
+        clearButton.setTextColor(WHITE);
+        clearButton.setTypeface(Typeface.DEFAULT_BOLD);
+        clearButton.setBackground(rounded(ACCENT, 15));
+        clearButton.setElevation(dp(3));
 
         bottom.addView(
-                clearCookies,
-                new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        dp(52)
-                )
+            clearButton,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(52)
+            )
         );
 
-        clearCookies.setOnClickListener(
-                v -> clearCookiesAndReload()
-        );
+        clearButton.setOnClickListener(v -> clearCookies());
 
-        root.addView(bottom);
+        root.addView(
+            bottom,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                dp(68)
+            )
+        );
 
         setContentView(root);
 
-        // LOAD URL FROM KEYBOARD
+        // URL ENTRY
+        urlBar.setOnEditorActionListener((view, actionId, event) -> {
+            boolean enterPressed = event != null
+                && event.getKeyCode() == KeyEvent.KEYCODE_ENTER
+                && event.getAction() == KeyEvent.ACTION_DOWN;
 
-        urlBar.setOnEditorActionListener(
-                (view, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_GO
+                || actionId == EditorInfo.IME_ACTION_DONE
+                || enterPressed) {
 
-                    boolean enter = event != null
-                            && event.getKeyCode()
-                            == KeyEvent.KEYCODE_ENTER
-                            && event.getAction()
-                            == KeyEvent.ACTION_DOWN;
+                loadAddress();
+                return true;
+            }
 
-                    if (actionId == EditorInfo.IME_ACTION_GO
-                            || actionId == EditorInfo.IME_ACTION_DONE
-                            || enter) {
-
-                        loadAddress();
-                        return true;
-                    }
-
-                    return false;
-                }
-        );
+            return false;
+        });
 
         // INITIAL PAGE
-
         if (savedInstanceState != null
-                && webView.restoreState(savedInstanceState) != null) {
-
-            // Restore the previous WebView state.
-
+            && webView.restoreState(savedInstanceState) != null) {
+            // Restored previous page.
         } else {
             webView.loadUrl(DEFAULT_URL);
         }
     }
 
-    // =================================
-    // LOAD WEBSITE
-    // =================================
-
     private void loadAddress() {
-
         String address = urlBar.getText().toString().trim();
 
         if (address.isEmpty()) {
@@ -290,38 +293,32 @@ public class MainActivity extends Activity {
 
         if (uri.getHost() == null) {
             Toast.makeText(
-                    this,
-                    "Enter a valid website address",
-                    Toast.LENGTH_SHORT
+                this,
+                "Enter a valid website address",
+                Toast.LENGTH_SHORT
             ).show();
-
             return;
         }
 
         InputMethodManager keyboard =
-                (InputMethodManager) getSystemService(
-                        Context.INPUT_METHOD_SERVICE
-                );
+            (InputMethodManager) getSystemService(
+                Context.INPUT_METHOD_SERVICE
+            );
 
         if (keyboard != null) {
             keyboard.hideSoftInputFromWindow(
-                    urlBar.getWindowToken(), 0
+                urlBar.getWindowToken(), 0
             );
         }
 
+        urlBar.clearFocus();
         webView.loadUrl(uri.toString());
     }
 
-    // =================================
-    // CLEAR COOKIES AND CACHE
-    // =================================
-
-    private void clearCookiesAndReload() {
-
+    private void clearCookies() {
         CookieManager cookies = CookieManager.getInstance();
 
         cookies.removeAllCookies(success -> {
-
             cookies.flush();
 
             webView.clearCache(true);
@@ -332,79 +329,67 @@ public class MainActivity extends Activity {
             webView.loadUrl(DEFAULT_URL);
 
             Toast.makeText(
-                    MainActivity.this,
-                    "Cookies and cache cleared",
-                    Toast.LENGTH_SHORT
+                MainActivity.this,
+                "Cookies and cache cleared",
+                Toast.LENGTH_SHORT
             ).show();
         });
     }
 
-    // =================================
-    // MENU
-    // =================================
-
     private void showMenu() {
-
-        String[] options = {
-                "Reload current page",
-                "Open default PayPal page",
-                "Open in external browser",
-                "About PayPal Work"
+        String[] items = {
+            "Reload current page",
+            "Open default PayPal page",
+            "Open in external browser",
+            "About PayPal Work"
         };
 
         new AlertDialog.Builder(this)
-                .setTitle("PayPal Work")
-                .setItems(options, (dialog, which) -> {
+            .setTitle("PayPal Work")
+            .setItems(items, (dialog, which) -> {
+                if (which == 0) {
+                    webView.reload();
 
-                    if (which == 0) {
+                } else if (which == 1) {
+                    urlBar.setText(DEFAULT_URL);
+                    webView.loadUrl(DEFAULT_URL);
 
-                        webView.reload();
+                } else if (which == 2) {
+                    String current = webView.getUrl();
 
-                    } else if (which == 1) {
-
-                        urlBar.setText(DEFAULT_URL);
-                        webView.loadUrl(DEFAULT_URL);
-
-                    } else if (which == 2) {
-
-                        String current = webView.getUrl();
-
-                        if (current != null) {
-                            try {
-                                startActivity(new Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse(current)
-                                ));
-                            } catch (Exception e) {
-                                Toast.makeText(
-                                        this,
-                                        "Browser unavailable",
-                                        Toast.LENGTH_SHORT
-                                ).show();
-                            }
+                    if (current != null) {
+                        try {
+                            startActivity(new Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse(current)
+                            ));
+                        } catch (Exception e) {
+                            Toast.makeText(
+                                this,
+                                "Browser unavailable",
+                                Toast.LENGTH_SHORT
+                            ).show();
                         }
-
-                    } else {
-
-                        new AlertDialog.Builder(this)
-                                .setTitle("About PayPal Work")
-                                .setMessage(
-                                        "PayPal Work is an independent " +
-                                        "browser wrapper and is not an " +
-                                        "official PayPal application. " +
-                                        "Always verify the website address " +
-                                        "before entering account details."
-                                )
-                                .setPositiveButton("OK", null)
-                                .show();
                     }
-                })
-                .show();
+
+                } else {
+                    new AlertDialog.Builder(this)
+                        .setTitle("About PayPal Work")
+                        .setMessage(
+                            "PayPal Work is an independent app " +
+                            "and is not an official PayPal product. " +
+                            "Verify the website address before " +
+                            "entering account details."
+                        )
+                        .setPositiveButton("OK", null)
+                        .show();
+                }
+            })
+            .show();
     }
 
     @Override
     public void onBackPressed() {
-
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
         } else {
@@ -414,7 +399,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
-
         super.onSaveInstanceState(state);
 
         if (webView != null) {
@@ -424,7 +408,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-
         if (webView != null) {
             webView.stopLoading();
             webView.destroy();
