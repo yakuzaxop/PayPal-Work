@@ -5,6 +5,8 @@
     <application
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:label="PayPal Work"
+        android:icon="@drawable/paypal_icon"
+        android:roundIcon="@drawable/paypal_icon"
         android:usesCleartextTraffic="false"
         android:hardwareAccelerated="true">
 
@@ -15,7 +17,6 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
